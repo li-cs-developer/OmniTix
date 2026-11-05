@@ -5,7 +5,8 @@
 # ─── Stage 1: Build ─────────────────────────────────────
 FROM eclipse-temurin:25-jdk-alpine AS build
 
-RUN apk add --no-cache bash git curl unzip
+# Add gcompat to the package list
+RUN apk add --no-cache bash git curl unzip gcompat
 
 WORKDIR /app
 

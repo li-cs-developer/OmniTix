@@ -32,22 +32,44 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    const topics = [
-      'omnitix.seat.held',
-      'omnitix.seat.expired',
-      'omnitix.seat.sold',
-      'omnitix.ga.held',
-      'omnitix.ga.expired',
-      'omnitix.ga.sold',
-      'omnitix.ticket.issued',
-      'omnitix.ticket.scanned',
+    // 1. Grab the prefix from env (defaults to empty string)
+    const prefix = process.env.KAFKA_TOPIC_PREFIX ?? '';
+
+    // 2. Define the base topics
+    const baseTopics = [
+      'seat.held',
+      'seat.expired',
+      'seat.sold',
+      'ga.held',
+      'ga.expired',
+      'ga.sold',
+      'ticket.issued',
+      'ticket.scanned',
     ];
+
+    // 3. Apply the prefix if it exists
+    const topics = baseTopics.map(t => (prefix ? `${prefix}.${t}` : t));
 
     await this.consumer.connect();
     this.logger.log(`kafka consumer connected (group: ${process.env.KAFKA_GROUP_ID})`);
 
+    // Retry logic to handle KRaft metadata propagation delay
     for (const topic of topics) {
-      await this.consumer.subscribe({ topic, fromBeginning: false });
+      let retries = 5;
+      while (retries > 0) {
+        try {
+          await this.consumer.subscribe({ topic, fromBeginning: false });
+          break; // Success, move to next topic
+        } catch (error: any) {
+          if (error.code === 3 && retries > 1) { // UNKNOWN_TOPIC_OR_PARTITION
+            this.logger.warn(`Topic ${topic} not ready, retrying in 2s...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            retries--;
+          } else {
+            throw error; // Fatal error or out of retries
+          }
+        }
+      }
     }
     this.logger.log(`subscribed to ${topics.length} topics`);
 

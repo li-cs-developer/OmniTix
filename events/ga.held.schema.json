@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/ga.held.schema.json",
+  "title": "ga.held",
+  "description": "Emitted when N units from a GA zone are held. Viewers should update GA availability display.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "ga.held" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "event_occurrence_id",
+        "ga_zone_id",
+        "zone_name",
+        "quantity",
+        "user_id",
+        "hold_token",
+        "expires_at",
+        "remaining_capacity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "event_occurrence_id": { "type": "string" },
+        "ga_zone_id":          { "type": "string" },
+        "zone_name":           { "type": "string" },
+        "quantity":            { "type": "integer", "minimum": 1 },
+        "user_id":             { "type": "string" },
+        "hold_token":          { "type": "string" },
+        "expires_at":          { "type": "string", "format": "date-time" },
+        "remaining_capacity":  { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

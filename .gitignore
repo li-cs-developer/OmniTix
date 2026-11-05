@@ -1,0 +1,88 @@
+# ─── Environment ────────────────────────────────────────
+.env
+.env.local
+*.env.local
+!.env.example
+!services/*/.env.example
+services/go-inventory/.env
+services/go-inventory/.env.local
+
+# ─── IDE ────────────────────────────────────────────────
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# ─── OS ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Node ───────────────────────────────────────────────
+node_modules/
+.next/
+dist/
+*.log
+.pnpm-store/
+*.tsbuildinfo
+
+# ─── PHP / Laravel ──────────────────────────────────────
+/services/laravel-core/vendor/
+/services/laravel-core/storage/*.key
+/services/laravel-core/storage/framework/cache/*
+/services/laravel-core/storage/framework/sessions/*
+/services/laravel-core/storage/framework/views/*
+/services/laravel-core/.phpunit.result.cache
+/services/laravel-core/bootstrap/cache/*.php
+/services/laravel-core/database/database.sqlite
+/services/laravel-core/storage/logs/*.log
+/services/laravel-core/.env
+
+# ─── Go ─────────────────────────────────────────────────
+/services/go-inventory/bin/
+*.test
+*.out
+
+# ─── Rust ───────────────────────────────────────────────
+/services/rust-crypto/target/
+/services/rust-crypto/keys/*.private
+/services/rust-crypto/keys/*.public
+/services/rust-crypto/bench.txt
+/services/rust-crypto/src/generated/*.rs
+/services/rust-crypto/src/generated/*.bin
+!/services/rust-crypto/src/generated/.gitkeep
+
+# ─── Kotlin ─────────────────────────────────────────────
+/services/kotlin-ledger/build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+/services/kotlin-ledger/.kotlin/
+/services/kotlin-ledger/.env
+
+# ─── NestJS ─────────────────────────────────────────────
+/services/nestjs-ws/dist/
+/services/nestjs-ws/.env
+
+# ─── Next.js ────────────────────────────────────────────
+/services/nextjs-storefront/.next/
+/services/nextjs-storefront/.env
+/services/nextjs-storefront/tsconfig.tsbuildinfo
+
+# ─── Docker ─────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Local runtime data ─────────────────────────────────
+data/
+infra/minio/data/
+infra/postgres/data/
+infra/redis/data/
+infra/kafka/data/node_modules/
+.next/
+build/
+target/
+.env
+node_modules/
+.next/
+build/
+target/
+.env

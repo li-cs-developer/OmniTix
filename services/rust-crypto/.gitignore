@@ -1,0 +1,5 @@
+target/
+keys/*.private
+keys/*.public
+src/generated/*.rs
+!src/generated/.gitkeep

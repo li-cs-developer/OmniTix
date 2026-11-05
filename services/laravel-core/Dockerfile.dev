@@ -1,0 +1,22 @@
+FROM php:8.4-fpm-alpine
+
+RUN apk add --no-cache \
+        bash git curl unzip \
+        icu-dev libpq-dev libzip-dev oniguruma-dev \
+        postgresql-client $PHPIZE_DEPS
+
+RUN docker-php-ext-install pdo_pgsql pgsql bcmath intl opcache pcntl zip
+RUN pecl install redis && docker-php-ext-enable redis
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+ARG UID=1000
+ARG GID=1000
+RUN addgroup -g ${GID} -S app 2>/dev/null || true && \
+    adduser  -u ${UID} -S app -G app 2>/dev/null || true
+
+USER app
+EXPOSE 8000
+CMD ["php-fpm"]

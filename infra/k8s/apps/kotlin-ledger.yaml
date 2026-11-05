@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kotlin-ledger
+  namespace: omnitix
+spec:
+  selector:
+    app: kotlin-ledger
+  ports:
+  - port: 8081
+    targetPort: 8081
+    name: actuator
+  - port: 8082
+    targetPort: 8082
+    name: http
+  - port: 50053
+    targetPort: 50053
+    name: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kotlin-ledger
+  namespace: omnitix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kotlin-ledger
+  template:
+    metadata:
+      labels:
+        app: kotlin-ledger
+    spec:
+      containers:
+      - name: kotlin-ledger
+        image: omnitix/kotlin-ledger:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        - containerPort: 8082
+        - containerPort: 50053
+        envFrom:
+        - configMapRef:
+            name: omnitix-config
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: omnitix-secrets
+              key: LEDGER_DB_PASSWORD
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10

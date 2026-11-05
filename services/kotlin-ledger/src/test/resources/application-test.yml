@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/${DB_NAME:omnitix}?currentSchema=ledger,public
+    username: ${DB_USER:omnitix_ledger}
+    password: ${DB_PASSWORD:omnitix_ledger_dev_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  task:
+    scheduling:
+      enabled: false
+
+grpc:
+  server:
+    enabled: false
+
+ledger:
+  http:
+    enabled: false

@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: omnitix
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - infra/postgres.yaml
+  - infra/redis.yaml
+  - infra/kafka.yaml
+  - infra/seaweedfs.yaml
+  - apps/laravel-core.yaml
+  - apps/go-inventory.yaml
+  - apps/rust-crypto.yaml
+  - apps/kotlin-ledger.yaml
+  - apps/nestjs-ws.yaml
+  - apps/nextjs-storefront.yaml
+  - ingress.yaml

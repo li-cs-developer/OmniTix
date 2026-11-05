@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/refund.issued.schema.json",
+  "title": "refund.issued",
+  "description": "Emitted by Kotlin Ledger when a refund is processed. Laravel voids affected tickets; WebSocket returns seats to AVAILABLE.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "refund.issued" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "refund_id",
+        "payment_id",
+        "order_id",
+        "amount_cents",
+        "currency",
+        "reason",
+        "refunded_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "refund_id":    { "type": "string" },
+        "payment_id":   { "type": "string" },
+        "order_id":     { "type": "string" },
+        "amount_cents": { "type": "integer", "minimum": 0 },
+        "currency":     { "type": "string", "minLength": 3, "maxLength": 3 },
+        "reason":       { "type": "string" },
+        "provider_ref": { "type": "string" },
+        "refunded_at":  { "type": "string", "format": "date-time" },
+        "affected_ticket_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tickets voided by this refund (empty for full-order refunds that void all)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# Binary
+bin/
+tmp/
+
+# Generated protobuf stubs (regenerated on demand)
+gen/
+
+# Air logs
+build-errors.log
+
+# Local env
+.env.local

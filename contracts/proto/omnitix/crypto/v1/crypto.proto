@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package omnitix.crypto.v1;
+
+option go_package = "github.com/omnitix/contracts/gen/go/crypto/v1;cryptov1";
+option java_package = "com.omnitix.contracts.crypto.v1";
+option java_multiple_files = true;
+
+import "omnitix/common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ═══════════════════════════════════════════════════════════
+// Rust Crypto Service — Ed25519 signing & verification
+// ═══════════════════════════════════════════════════════════
+service CryptoService {
+  // Sign a ticket payload, return base64 signature + key_id
+  rpc SignTicket      (SignTicketRequest)      returns (SignTicketResponse);
+
+  // Verify a scanned QR payload
+  rpc VerifyTicket    (VerifyTicketRequest)    returns (VerifyTicketResponse);
+
+  // Get active public key(s) — used by external verifiers
+  rpc GetPublicKeys   (GetPublicKeysRequest)   returns (GetPublicKeysResponse);
+
+  // Rotate the active signing key (admin operation)
+  rpc RotateKey       (RotateKeyRequest)       returns (RotateKeyResponse);
+
+  // Health check
+  rpc Health          (HealthRequest)    returns (HealthResponse);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TicketPayload — the canonical, signed content of a ticket
+// Fields are alphabetically ordered before signing to ensure
+// deterministic serialization across languages.
+// ═══════════════════════════════════════════════════════════
+message TicketPayload {
+  string ticket_id            = 1;   // ULID
+  string ticket_number        = 2;   // Human-readable
+  string event_id             = 3;
+  string event_occurrence_id  = 4;
+  string seat_id              = 5;   // Empty for GA tickets
+  string ga_zone_id           = 6;   // Empty for seat tickets
+  string price_tier_id        = 7;
+  string buyer_user_id        = 8;
+  google.protobuf.Timestamp issued_at = 9;
+  string nonce                = 10;  // Random 128-bit, prevents replay
+}
+
+// ─── SignTicket ────────────────────────────────────────────
+message SignTicketRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  TicketPayload payload = 2;
+}
+
+message SignTicketResponse {
+  omnitix.common.v1.Result result = 1;
+  string qr_payload   = 2;  // Base64url-encoded canonical JSON of payload
+  string signature    = 3;  // Base64url-encoded Ed25519 signature (64 bytes)
+  string key_id       = 4;  // e.g. "v1"
+  google.protobuf.Timestamp signed_at = 5;
+}
+
+// ─── VerifyTicket ──────────────────────────────────────────
+message VerifyTicketRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string qr_payload = 2;
+  string signature  = 3;
+  string key_id     = 4;
+}
+
+message VerifyTicketResponse {
+  omnitix.common.v1.Result result = 1;
+  bool   valid  = 2;
+  TicketPayload payload = 3;   // Set only if valid
+  string failure_reason = 4;   // e.g. "signature_mismatch", "unknown_key_id"
+}
+
+// ─── GetPublicKeys ─────────────────────────────────────────
+message PublicKey {
+  string key_id     = 1;
+  string algorithm  = 2;   // "Ed25519"
+  string public_key = 3;   // Base64url-encoded
+  bool   active     = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp retired_at = 6;
+}
+
+message GetPublicKeysRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  bool active_only = 2;
+}
+
+message GetPublicKeysResponse {
+  omnitix.common.v1.Result result = 1;
+  repeated PublicKey keys = 2;
+}
+
+// ─── RotateKey ─────────────────────────────────────────────
+message RotateKeyRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string new_key_id = 2;   // e.g. "v2"
+}
+
+message RotateKeyResponse {
+  omnitix.common.v1.Result result = 1;
+  PublicKey new_key = 2;
+}
+
+// ─── Health ────────────────────────────────────────────────
+message HealthRequest {}
+
+message HealthResponse {
+  bool   healthy              = 1;
+  string version              = 2;
+  string active_key_id        = 3;
+  int32  total_keys           = 4;
+  google.protobuf.Timestamp checked_at = 5;
+}

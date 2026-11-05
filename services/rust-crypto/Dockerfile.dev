@@ -1,0 +1,31 @@
+# ═══════════════════════════════════════════════════════════
+# OmniTix Crypto Engine (dev)
+# ═══════════════════════════════════════════════════════════
+
+FROM rust:1.83-alpine
+
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    make \
+    protobuf \
+    protobuf-dev \
+    musl-dev \
+    openssl-dev \
+    pkgconfig
+
+# cargo-watch for hot reload
+RUN cargo install cargo-watch --locked
+
+WORKDIR /app
+
+# Cache deps
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+    cargo build 2>/dev/null || true && \
+    rm -rf src
+
+COPY . .
+
+CMD ["cargo", "watch", "-x", "run"]

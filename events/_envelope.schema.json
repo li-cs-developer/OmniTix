@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/envelope.schema.json",
+  "title": "OmniTix Event Envelope",
+  "description": "Base envelope wrapping every OmniTix Kafka event. All events share this structure; the payload field is event-specific.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "version",
+    "occurred_at",
+    "producer",
+    "payload"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique event ID (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Event type — matches the Kafka topic suffix",
+      "enum": [
+        "seat.held",
+        "seat.expired",
+        "seat.sold",
+        "ga.held",
+        "ga.expired",
+        "ga.sold",
+        "payment.completed",
+        "payment.failed",
+        "refund.issued",
+        "ticket.issued",
+        "ticket.scanned",
+        "payout.settled"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version for the payload"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp when the event occurred"
+    },
+    "producer": {
+      "type": "string",
+      "description": "Service that emitted this event",
+      "enum": [
+        "go-inventory",
+        "rust-crypto",
+        "kotlin-ledger",
+        "nestjs-ws",
+        "laravel-core",
+        "nextjs-storefront"
+      ]
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Request ID from the originating RequestContext, for distributed tracing"
+    },
+    "partition_key": {
+      "type": "string",
+      "description": "Explicit partition key value — documents how the message was routed"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific body — see individual schema files"
+    }
+  }
+}

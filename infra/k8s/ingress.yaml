@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: omnitix-ingress
+  namespace: omnitix
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: nestjs-ws
+            port:
+              number: 3001
+      - path: /api/v1
+        pathType: Prefix
+        backend:
+          service:
+            name: laravel-core
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nextjs-storefront
+            port:
+              number: 3000

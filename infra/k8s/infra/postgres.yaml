@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: omnitix
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: omnitix
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:18-alpine
+        env:
+        - name: POSTGRES_DB
+          value: omnitix
+        - name: POSTGRES_USER
+          value: omnitix
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: omnitix-secrets
+              key: POSTGRES_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        ports:
+        - containerPort: 5432
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        - name: init-sql
+          mountPath: /docker-entrypoint-initdb.d
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "omnitix"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: init-sql
+        configMap:
+          name: postgres-init
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources:
+        requests:
+          storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: omnitix
+data:
+  00-create-schemas.sql: |
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+    CREATE EXTENSION IF NOT EXISTS "btree_gin";
+    CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+    CREATE SCHEMA IF NOT EXISTS app;
+    CREATE SCHEMA IF NOT EXISTS ledger;
+    CREATE SCHEMA IF NOT EXISTS reporting;
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'omnitix_ledger') THEN
+        CREATE ROLE omnitix_ledger LOGIN PASSWORD 'omnitix_ledger_dev_password';
+      END IF;
+    END
+    $$;
+    GRANT ALL ON SCHEMA ledger TO omnitix_ledger;
+    GRANT USAGE ON SCHEMA app TO omnitix_ledger;
+    GRANT USAGE ON SCHEMA reporting TO omnitix_ledger;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA ledger GRANT ALL ON TABLES TO omnitix_ledger;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA ledger GRANT ALL ON SEQUENCES TO omnitix_ledger;

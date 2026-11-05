@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/ticket.scanned.schema.json",
+  "title": "ticket.scanned",
+  "description": "Emitted when a ticket is scanned at the gate. Includes verification result for auditing.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "ticket.scanned" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "ticket_id",
+        "ticket_number",
+        "event_occurrence_id",
+        "scan_result",
+        "scanned_at",
+        "gate_identifier"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ticket_id":           { "type": "string" },
+        "ticket_number":       { "type": "string" },
+        "event_occurrence_id": { "type": "string" },
+        "scanned_by_user_id":  { "type": "string" },
+        "gate_identifier":     { "type": "string", "description": "e.g. 'Gate A', 'Scanner-07'" },
+        "scan_result": {
+          "type": "string",
+          "enum": ["accepted", "already_used", "invalid_sig", "voided", "wrong_event", "expired", "unknown"]
+        },
+        "scanned_at":          { "type": "string", "format": "date-time" },
+        "scanner_ip":          { "type": "string" }
+      }
+    }
+  }
+}

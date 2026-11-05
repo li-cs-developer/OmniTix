@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/seat.expired.schema.json",
+  "title": "seat.expired",
+  "description": "Emitted when a Redis hold TTL elapses without confirmation. Viewers should mark the seat AVAILABLE again.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "seat.expired" },
+    "payload": {
+      "type": "object",
+      "required": ["event_occurrence_id", "seat_id", "seat_label", "user_id", "hold_token"],
+      "additionalProperties": false,
+      "properties": {
+        "event_occurrence_id": { "type": "string" },
+        "seat_id":             { "type": "string" },
+        "seat_label":          { "type": "string" },
+        "user_id":             { "type": "string", "description": "User whose hold expired" },
+        "hold_token":          { "type": "string" },
+        "held_duration_seconds": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

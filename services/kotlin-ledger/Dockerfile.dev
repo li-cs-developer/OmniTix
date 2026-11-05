@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════
+# OmniTix Ledger (dev)
+# ═══════════════════════════════════════════════════════════
+
+FROM eclipse-temurin:25-jdk-alpine
+
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    protobuf \
+    protobuf-dev
+
+WORKDIR /app
+
+# Prime the Gradle cache (optional; speeds up subsequent builds)
+COPY gradlew gradlew
+COPY gradle/wrapper gradle/wrapper
+RUN chmod +x gradlew
+
+COPY . .
+
+CMD ["./gradlew", "bootRun"]

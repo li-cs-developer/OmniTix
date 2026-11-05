@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/payment.failed.schema.json",
+  "title": "payment.failed",
+  "description": "Emitted by Kotlin Ledger when a charge fails. Laravel releases holds; WebSocket updates seat states.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "payment.failed" },
+    "payload": {
+      "type": "object",
+      "required": ["order_id", "user_id", "failure_code", "failure_message", "failed_at"],
+      "additionalProperties": false,
+      "properties": {
+        "order_id":        { "type": "string" },
+        "user_id":         { "type": "string" },
+        "amount_cents":    { "type": "integer", "minimum": 0 },
+        "currency":        { "type": "string" },
+        "provider":        { "type": "string", "enum": ["mock", "stripe"] },
+        "failure_code":    { "type": "string", "description": "e.g. 'card_declined', 'insufficient_funds'" },
+        "failure_message": { "type": "string" },
+        "failed_at":       { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

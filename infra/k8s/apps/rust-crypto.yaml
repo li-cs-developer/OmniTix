@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rust-crypto
+  namespace: omnitix
+spec:
+  selector:
+    app: rust-crypto
+  ports:
+  - port: 50054
+    targetPort: 50054
+    name: http
+  - port: 50052
+    targetPort: 50052
+    name: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rust-crypto
+  namespace: omnitix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rust-crypto
+  template:
+    metadata:
+      labels:
+        app: rust-crypto
+    spec:
+      containers:
+      - name: rust-crypto
+        image: omnitix/rust-crypto:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50054
+        - containerPort: 50052
+        envFrom:
+        - configMapRef:
+            name: omnitix-config
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 50054
+          initialDelaySeconds: 5
+          periodSeconds: 5

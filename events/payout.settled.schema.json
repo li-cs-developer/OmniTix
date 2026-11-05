@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/payout.settled.schema.json",
+  "title": "payout.settled",
+  "description": "Emitted by Kotlin Ledger at the end of a daily/weekly settlement batch. Notifies the organizer.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "payout.settled" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "payout_id",
+        "organizer_id",
+        "period_start",
+        "period_end",
+        "gross_cents",
+        "fees_cents",
+        "tax_cents",
+        "net_cents",
+        "currency",
+        "settled_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "payout_id":       { "type": "string" },
+        "organizer_id":    { "type": "string" },
+        "period_start":    { "type": "string", "format": "date-time" },
+        "period_end":      { "type": "string", "format": "date-time" },
+        "gross_cents":     { "type": "integer", "minimum": 0, "description": "Total ticket + fee revenue" },
+        "fees_cents":      { "type": "integer", "minimum": 0, "description": "Platform fee deducted" },
+        "tax_cents":       { "type": "integer", "minimum": 0, "description": "Tax remitted on organizer's behalf" },
+        "net_cents":       { "type": "integer", "description": "gross - fees - tax, may be negative if refunds exceed" },
+        "currency":        { "type": "string", "minLength": 3, "maxLength": 3 },
+        "journal_entry_id": { "type": "string" },
+        "settled_at":      { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

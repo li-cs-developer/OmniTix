@@ -1,0 +1,160 @@
+# ═══════════════════════════════════════════════════════════
+# OmniTix — Local development infrastructure
+# Fedora 44 + SELinux: all bind mounts use the :z flag.
+# ═══════════════════════════════════════════════════════════
+
+name: omnitix
+
+services:
+
+  # ─── PostgreSQL 18 ───────────────────────────────────
+  postgres:
+    image: postgres:18-alpine
+    container_name: omnitix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-omnitix}
+      POSTGRES_USER: ${POSTGRES_USER:-omnitix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omnitix_dev_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omnitix} -d ${POSTGRES_DB:-omnitix}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - omnitix_net
+
+  # ─── Redis 7 ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: omnitix-redis
+    restart: unless-stopped
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    ports:
+      - "${REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:z
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - omnitix_net
+
+  # ─── Kafka (KRaft mode — no Zookeeper) ───────────────
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: omnitix-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"       # INTERNAL — Docker-network clients
+      - "29092:29092"     # EXTERNAL — host-side clients
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: INTERNAL://:9092,EXTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: "omnitix-kraft-cluster-01"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    networks:
+      - omnitix_net
+
+  # ─── SeaweedFS (S3-compatible object storage) ─────────
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: omnitix-seaweedfs
+    restart: unless-stopped
+    command: ["mini", "-s3", "-s3.config=/etc/seaweedfs/s3.json", "-dir=/data"]
+    volumes:
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:z
+      - seaweedfs_data:/data
+    ports:
+      - "${S3_HOST_PORT:-9000}:8333"
+      - "${S3_CONSOLE_PORT:-9001}:9333"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8333"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - omnitix_net
+
+  # ─── Laravel Core (dev) ──────────────────────────────
+  laravel:
+    build:
+      context: ./services/laravel-core
+      dockerfile: Dockerfile.dev
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    container_name: omnitix-laravel
+    restart: unless-stopped
+    working_dir: /var/www/html
+    command: >
+      sh -c "composer install --no-interaction --prefer-dist &&
+             php artisan serve --host=0.0.0.0 --port=8000"
+    ports:
+      - "${LARAVEL_HTTP_PORT:-8000}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB:-omnitix}
+      DB_USERNAME: ${POSTGRES_USER:-omnitix}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-omnitix_dev_password}
+      DB_SEARCH_PATH: app,public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_CLIENT: phpredis
+      SESSION_DRIVER: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      INVENTORY_HTTP_URL: http://host.docker.internal:8080
+    volumes:
+      - ./services/laravel-core:/var/www/html:z
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omnitix_net
+
+networks:
+  omnitix_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  seaweedfs_data:

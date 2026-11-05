@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/ga.expired.schema.json",
+  "title": "ga.expired",
+  "description": "Emitted when a GA hold TTL elapses without confirmation. Capacity is returned to the pool.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "ga.expired" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "event_occurrence_id",
+        "ga_zone_id",
+        "quantity",
+        "user_id",
+        "hold_token",
+        "remaining_capacity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "event_occurrence_id": { "type": "string" },
+        "ga_zone_id":          { "type": "string" },
+        "quantity":            { "type": "integer", "minimum": 1 },
+        "user_id":             { "type": "string" },
+        "hold_token":          { "type": "string" },
+        "held_duration_seconds": { "type": "integer", "minimum": 0 },
+        "remaining_capacity":  { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

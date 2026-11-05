@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/seat.held.schema.json",
+  "title": "seat.held",
+  "description": "Emitted when a seat is atomically held in Redis. All viewers of this event occurrence should mark the seat as HELD.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "seat.held" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "event_occurrence_id",
+        "seat_id",
+        "seat_label",
+        "section",
+        "row",
+        "seat_number",
+        "user_id",
+        "hold_token",
+        "expires_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "event_occurrence_id": { "type": "string" },
+        "seat_id":             { "type": "string" },
+        "seat_label":          { "type": "string", "description": "Human-readable, e.g. 'Orchestra A12'" },
+        "section":             { "type": "string" },
+        "row":                 { "type": "string" },
+        "seat_number":         { "type": "string" },
+        "user_id":             { "type": "string" },
+        "hold_token":          { "type": "string" },
+        "expires_at":          { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

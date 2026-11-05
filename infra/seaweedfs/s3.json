@@ -1,0 +1,20 @@
+{
+  "identities": [
+    {
+      "name": "omnitix",
+      "credentials": [
+        {
+          "accessKey": "omnitix",
+          "secretKey": "omnitix_dev_password"
+        }
+      ],
+      "actions": [
+        "Admin",
+        "Read",
+        "Write",
+        "List",
+        "Tagging"
+      ]
+    }
+  ]
+}

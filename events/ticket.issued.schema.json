@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/ticket.issued.schema.json",
+  "title": "ticket.issued",
+  "description": "Emitted by Laravel after a Rust-signed ticket is persisted. Triggers email delivery.",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "ticket.issued" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "ticket_id",
+        "ticket_number",
+        "order_id",
+        "event_id",
+        "event_occurrence_id",
+        "user_id",
+        "buyer_email",
+        "qr_payload",
+        "qr_signature",
+        "key_id",
+        "issued_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "ticket_id":            { "type": "string" },
+        "ticket_number":        { "type": "string" },
+        "order_id":             { "type": "string" },
+        "event_id":             { "type": "string" },
+        "event_occurrence_id":  { "type": "string" },
+        "seat_id":              { "type": "string" },
+        "ga_zone_id":           { "type": "string" },
+        "seat_label":           { "type": "string" },
+        "user_id":              { "type": "string" },
+        "buyer_email":          { "type": "string", "format": "email" },
+        "qr_payload":           { "type": "string", "description": "Base64url-encoded canonical payload" },
+        "qr_signature":         { "type": "string", "description": "Base64url-encoded Ed25519 signature" },
+        "key_id":               { "type": "string", "description": "Signing key identifier, e.g. 'v1'" },
+        "issued_at":            { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

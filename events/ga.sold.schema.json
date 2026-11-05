@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omnitix.local/schemas/ga.sold.schema.json",
+  "title": "ga.sold",
+  "description": "Emitted when N GA units are confirmed as sold (payment succeeded).",
+  "allOf": [{ "$ref": "_envelope.schema.json" }],
+  "properties": {
+    "type": { "const": "ga.sold" },
+    "payload": {
+      "type": "object",
+      "required": [
+        "event_occurrence_id",
+        "ga_zone_id",
+        "quantity",
+        "order_id",
+        "user_id",
+        "sold_at",
+        "total_price_cents",
+        "currency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "event_occurrence_id": { "type": "string" },
+        "ga_zone_id":          { "type": "string" },
+        "quantity":            { "type": "integer", "minimum": 1 },
+        "order_id":            { "type": "string" },
+        "user_id":             { "type": "string" },
+        "sold_at":             { "type": "string", "format": "date-time" },
+        "total_price_cents":   { "type": "integer", "minimum": 0 },
+        "currency":            { "type": "string", "minLength": 3, "maxLength": 3 }
+      }
+    }
+  }
+}

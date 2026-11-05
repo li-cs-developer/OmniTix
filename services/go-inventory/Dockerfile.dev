@@ -1,0 +1,32 @@
+# ═══════════════════════════════════════════════════════════
+# OmniTix — Go Inventory Engine (dev)
+# Uses air for hot reload. Not for production.
+# ═══════════════════════════════════════════════════════════
+
+FROM golang:1.23-alpine
+
+# ─── Dev tools ──────────────────────────────────────────
+RUN apk add --no-cache \
+        bash \
+        git \
+        curl \
+        make \
+        protobuf \
+        protobuf-dev
+
+# ─── Air (hot reload) ───────────────────────────────────
+RUN go install github.com/air-verse/air@latest
+
+# ─── Buf (proto codegen) ────────────────────────────────
+RUN go install github.com/bufbuild/buf/cmd/buf@latest
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# ─── Working dir ────────────────────────────────────────
+WORKDIR /app
+
+# ─── PATH for Go binaries ───────────────────────────────
+ENV PATH="/root/go/bin:${PATH}"
+
+# Default command overridden by docker-compose
+CMD ["air", "-c", ".air.toml"]

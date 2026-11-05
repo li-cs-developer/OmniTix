@@ -49,6 +49,7 @@ dist/
 /services/rust-crypto/keys/*.public
 /services/rust-crypto/bench.txt
 /services/rust-crypto/src/generated/*.rs
+!services/rust-crypto/src/generated/mod.rs
 /services/rust-crypto/src/generated/*.bin
 !/services/rust-crypto/src/generated/.gitkeep
 

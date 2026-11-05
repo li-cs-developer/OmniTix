@@ -38,9 +38,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
 
-    // ─── Logging ─────────────────────────────────────────
-    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
-
     // ─── Kotlin ──────────────────────────────────────────
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -98,13 +95,9 @@ protobuf {
     }
 }
 
-sourceSets {
-    main {
-        proto {
-            srcDir("../../contracts/proto")
-        }
-    }
-}
+// NOTE: The `sourceSets { main { proto { srcDir(...) } } }` block has been 
+// intentionally removed. The protobuf plugin automatically looks in 
+// `src/main/proto` by default, which resolves the path remapping error.
 
 tasks.withType<KotlinCompile> {
     compilerOptions {
@@ -118,12 +111,6 @@ tasks.withType<Test> {
 }
 
 // ─── bootRun: default to local profile + host-side URLs ─
-// bootRun runs on the host, so Postgres/Redis/Kafka are reachable at
-// 127.0.0.1 (via Docker's port mapping), not at the container DNS names.
-// Inside Docker/K8s, set SPRING_PROFILES_ACTIVE=prod (or dev) and pass
-// the container DNS names via the container's own env; the defaults here
-// only apply when the env vars are absent, so production deployments
-// override them naturally.
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     environment("SPRING_PROFILES_ACTIVE", System.getenv("SPRING_PROFILES_ACTIVE") ?: "local")
     environment("DB_HOST", System.getenv("DB_HOST") ?: "127.0.0.1")

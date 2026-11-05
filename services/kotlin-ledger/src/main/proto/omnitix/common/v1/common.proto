@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package omnitix.common.v1;
+
+option go_package = "github.com/omnitix/contracts/gen/go/common/v1;commonv1";
+option java_package = "com.omnitix.contracts.common.v1";
+option java_multiple_files = true;
+option csharp_namespace = "OmniTix.Contracts.Common.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// ═══════════════════════════════════════════════════════════
+// RequestContext — carried by every request for tracing
+// ═══════════════════════════════════════════════════════════
+message RequestContext {
+  string request_id   = 1;  // UUID v4 for distributed tracing
+  string user_id      = 2;  // ULID of the acting user (empty if guest)
+  string organizer_id = 3;  // ULID of the organizer context (empty if buyer)
+  string ip_address   = 4;  // Client IP, for audit and anti-fraud
+  string user_agent   = 5;  // Truncated to 500 chars
+  google.protobuf.Timestamp requested_at = 6;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Result — structured outcome envelope for all responses
+// ═══════════════════════════════════════════════════════════
+message Result {
+  Status status = 1;
+  string error_code = 2;    // Stable machine-readable code (e.g. "SEAT_ALREADY_HELD")
+  string error_message = 3; // Human-readable, safe to log
+}
+
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_OK = 1;
+  STATUS_ERROR = 2;
+  STATUS_NOT_FOUND = 3;
+  STATUS_CONFLICT = 4;        // e.g. seat already held
+  STATUS_UNAVAILABLE = 5;     // e.g. Redis down, Kafka down
+  STATUS_PERMISSION_DENIED = 6;
+  STATUS_RATE_LIMITED = 7;
+  STATUS_INVALID_ARGUMENT = 8;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Money — always in cents, always with currency
+// ═══════════════════════════════════════════════════════════
+message Money {
+  int64  amount_cents = 1;   // Always positive for prices; sign is semantic in ledger
+  string currency     = 2;   // ISO 4217, e.g. "USD"
+}
+
+// ═══════════════════════════════════════════════════════════
+// Pagination — cursor-based for stable ordering at scale
+// ═══════════════════════════════════════════════════════════
+message PaginationRequest {
+  int32  page_size = 1;   // Max 200; default 50
+  string cursor    = 2;   // Opaque cursor from previous response; empty for first page
+}
+
+message PaginationResponse {
+  string next_cursor = 1; // Empty if no more pages
+  bool   has_more    = 2;
+  int32  total       = 3; // May be -1 if counting is expensive
+}
+
+// ═══════════════════════════════════════════════════════════
+// HoldToken — proof that a hold exists (from Go Inventory)
+// ═══════════════════════════════════════════════════════════
+message HoldToken {
+  string token           = 1;  // ULID, used for release/confirm/extend
+  string seat_id         = 2;  // Empty if this is a GA hold
+  string ga_zone_id      = 3;  // Empty if this is a seat hold
+  int32  quantity        = 4;  // 1 for seats; N for GA
+  google.protobuf.Timestamp expires_at = 5;
+  string event_occurrence_id = 6;
+  string user_id         = 7;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SeatState — live seat status broadcast over WebSocket
+// ═══════════════════════════════════════════════════════════
+enum SeatState {
+  SEAT_STATE_UNSPECIFIED = 0;
+  SEAT_STATE_AVAILABLE = 1;
+  SEAT_STATE_HELD = 2;
+  SEAT_STATE_SOLD = 3;
+  SEAT_STATE_BLOCKED = 4;   // Organizer-disabled
+  SEAT_STATE_UNAVAILABLE = 5;
+}

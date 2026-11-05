@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package omnitix.realtime.v1;
+
+option go_package = "github.com/omnitix/contracts/gen/go/realtime/v1;realtimev1";
+option java_package = "com.omnitix.contracts.realtime.v1";
+option java_multiple_files = true;
+
+import "omnitix/common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ═══════════════════════════════════════════════════════════
+// NestJS Real-time Gateway — WebSocket message contract
+//
+// NOTE: These messages are transmitted as JSON over WebSocket,
+// not gRPC. This .proto file exists to document the contract
+// and to allow code generation of matching TS interfaces.
+// ═══════════════════════════════════════════════════════════
+service RealtimeService {
+  // The actual WebSocket protocol is defined by messages below.
+  // No RPC methods — this service is consumed via WS.
+}
+
+// ═══════════════════════════════════════════════════════════
+// Client → Server messages
+// ═══════════════════════════════════════════════════════════
+message ClientSubscribe {
+  string event_occurrence_id = 1;
+}
+
+message ClientUnsubscribe {
+  string event_occurrence_id = 1;
+}
+
+message ClientPing {
+  google.protobuf.Timestamp sent_at = 1;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Server → Client messages
+// ═══════════════════════════════════════════════════════════
+message ServerSnapshot {
+  string event_occurrence_id = 1;
+  repeated SeatStateEntry seats = 2;
+  int32 viewer_count = 3;
+  google.protobuf.Timestamp snapshot_at = 4;
+}
+
+message SeatStateEntry {
+  string seat_id = 1;
+  omnitix.common.v1.SeatState state = 2;
+}
+
+message ServerSeatUpdate {
+  string event_occurrence_id = 1;
+  string seat_id             = 2;
+  omnitix.common.v1.SeatState state = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message ServerGaUpdate {
+  string event_occurrence_id = 1;
+  string ga_zone_id          = 2;
+  int32  held                = 3;
+  int32  sold                = 4;
+  int32  available           = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message ServerViewerCount {
+  string event_occurrence_id = 1;
+  int32  viewer_count        = 2;
+}
+
+message ServerError {
+  string code    = 1;
+  string message = 2;
+}
+
+message ServerPong {
+  google.protobuf.Timestamp client_sent_at = 1;
+  google.protobuf.Timestamp server_sent_at = 2;
+}

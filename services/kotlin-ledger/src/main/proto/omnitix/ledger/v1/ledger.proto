@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package omnitix.ledger.v1;
+
+option go_package = "github.com/omnitix/contracts/gen/go/ledger/v1;ledgerv1";
+option java_package = "com.omnitix.contracts.ledger.v1";
+option java_multiple_files = true;
+
+import "omnitix/common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ═══════════════════════════════════════════════════════════
+// Kotlin Financial Ledger — double-entry bookkeeping
+// ═══════════════════════════════════════════════════════════
+service LedgerService {
+  // Charge a payment (mocked adapter in v1)
+  rpc Charge             (ChargeRequest)              returns (ChargeResponse);
+
+  // Refund a payment (full or partial)
+  rpc Refund             (RefundRequest)              returns (RefundResponse);
+
+  // Get a payment's current state
+  rpc GetPayment         (GetPaymentRequest)          returns (GetPaymentResponse);
+
+  // Account balance (for reporting)
+  rpc GetBalance         (GetBalanceRequest)          returns (GetBalanceResponse);
+
+  // List journal entries (audit)
+  rpc ListJournalEntries (ListJournalEntriesRequest)  returns (ListJournalEntriesResponse);
+
+  // Health check
+  rpc Health             (HealthRequest)        returns (HealthResponse);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Account — chart of accounts
+// ═══════════════════════════════════════════════════════════
+enum AccountType {
+  ACCOUNT_TYPE_UNSPECIFIED = 0;
+  ACCOUNT_TYPE_ASSET = 1;         // Cash, Stripe balance
+  ACCOUNT_TYPE_LIABILITY = 2;     // Refund payable, tax payable
+  ACCOUNT_TYPE_REVENUE = 3;       // Ticket revenue, fee revenue
+  ACCOUNT_TYPE_EXPENSE = 4;       // Payment processing fees
+  ACCOUNT_TYPE_EQUITY = 5;        // Owner equity
+}
+
+// Well-known account codes (seeded on first boot)
+// ASSET_CASH, ASSET_STRIPE_BALANCE
+// LIABILITY_REFUNDS_PAYABLE, LIABILITY_TAX_PAYABLE, LIABILITY_ORGANIZER_PAYABLE
+// REVENUE_TICKETS, REVENUE_FEES
+// EXPENSE_STRIPE_FEES
+
+// ─── Charge ────────────────────────────────────────────────
+message ChargeRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string order_id             = 2;
+  omnitix.common.v1.Money amount = 3;
+  string payment_method_token = 4;   // From Stripe.js or mock token
+  string idempotency_key      = 5;
+  string organizer_id         = 6;
+  string buyer_user_id        = 7;
+  string buyer_email          = 8;
+}
+
+message ChargeResponse {
+  omnitix.common.v1.Result result = 1;
+  string payment_id     = 2;   // ULID
+  string provider_ref   = 3;   // Stripe charge ID or mock reference
+  PaymentStatus status  = 4;
+  string failure_code   = 5;
+  string failure_message = 6;
+  google.protobuf.Timestamp charged_at = 7;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_SUCCEEDED = 2;
+  PAYMENT_STATUS_FAILED = 3;
+  PAYMENT_STATUS_REFUNDED = 4;
+  PAYMENT_STATUS_PARTIALLY_REFUNDED = 5;
+}
+
+// ─── Refund ────────────────────────────────────────────────
+message RefundRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string payment_id = 2;
+  omnitix.common.v1.Money amount = 3;   // Omit / 0 for full refund
+  string reason = 4;
+  // The order this refund belongs to. Required so the ledger can find the
+  // original PAYMENT_CHARGE journal entry and reverse the exact account mix
+  // (tickets / fees / tax) proportionally. Empty = legacy fallback.
+  string order_id = 5;
+  // Which tickets this refund voids. Used only for the emitted
+  // refund.issued event — the ledger itself does not read this.
+  repeated string affected_ticket_ids = 6;
+}
+
+message RefundResponse {
+  omnitix.common.v1.Result result = 1;
+  string refund_id    = 2;
+  string provider_ref = 3;
+  omnitix.common.v1.Money refunded = 4;
+  google.protobuf.Timestamp refunded_at = 5;
+}
+
+// ─── GetPayment ────────────────────────────────────────────
+message GetPaymentRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string payment_id = 2;
+}
+
+message GetPaymentResponse {
+  omnitix.common.v1.Result result = 1;
+  string payment_id     = 2;
+  string order_id       = 3;
+  omnitix.common.v1.Money amount = 4;
+  omnitix.common.v1.Money refunded_amount = 5;
+  PaymentStatus status  = 6;
+  string provider_ref   = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// ─── GetBalance ────────────────────────────────────────────
+message GetBalanceRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string account_code = 2;
+  google.protobuf.Timestamp as_of = 3;
+}
+
+message GetBalanceResponse {
+  omnitix.common.v1.Result result = 1;
+  string account_code = 2;
+  omnitix.common.v1.Money balance = 3;
+  google.protobuf.Timestamp as_of = 4;
+}
+
+// ─── ListJournalEntries ────────────────────────────────────
+message JournalLine {
+  string account_code = 1;
+  AccountType account_type = 2;
+  int64 debit_cents  = 3;   // Debit side (0 if this is a credit)
+  int64 credit_cents = 4;   // Credit side (0 if this is a debit)
+  string memo        = 5;
+}
+
+message JournalEntry {
+  string id           = 1;
+  string reference    = 2;   // e.g. "ORDER-OTX-ABC123"
+  string description  = 3;
+  repeated JournalLine lines = 4;
+  google.protobuf.Timestamp posted_at = 5;
+}
+
+message ListJournalEntriesRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  omnitix.common.v1.PaginationRequest pagination = 2;
+  string reference = 3;   // Optional filter
+  google.protobuf.Timestamp from = 4;
+  google.protobuf.Timestamp to   = 5;
+}
+
+message ListJournalEntriesResponse {
+  omnitix.common.v1.Result result = 1;
+  repeated JournalEntry entries = 2;
+  omnitix.common.v1.PaginationResponse pagination = 3;
+}
+
+// ─── Health ────────────────────────────────────────────────
+message HealthRequest {}
+
+message HealthResponse {
+  bool   healthy           = 1;
+  string version           = 2;
+  bool   db_connected      = 3;
+  bool   kafka_connected   = 4;
+  string payment_adapter   = 5;   // "mock" or "stripe"
+  google.protobuf.Timestamp checked_at = 6;
+}

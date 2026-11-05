@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+package omnitix.inventory.v1;
+
+option go_package = "github.com/omnitix/contracts/gen/go/inventory/v1;inventoryv1";
+option java_package = "com.omnitix.contracts.inventory.v1";
+option java_multiple_files = true;
+
+import "omnitix/common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// ═══════════════════════════════════════════════════════════
+// Go Inventory Service — atomic seat & GA holds
+// ═══════════════════════════════════════════════════════════
+service InventoryService {
+  // Hold a specific seat (atomic SET NX in Redis)
+  rpc HoldSeat          (HoldSeatRequest)          returns (HoldSeatResponse);
+
+  // Hold N seats from a GA pool (atomic DECRBY via Lua)
+  rpc HoldGaZone        (HoldGaZoneRequest)        returns (HoldGaZoneResponse);
+
+  // Auto-pick best available contiguous seats in a section
+  rpc HoldBestAvailable (HoldBestAvailableRequest) returns (HoldBestAvailableResponse);
+
+  // Release a hold (user cancelled or checkout failed)
+  rpc ReleaseHold       (ReleaseHoldRequest)       returns (ReleaseHoldResponse);
+
+  // Extend a hold's TTL once (single-use in v1)
+  rpc ExtendHold        (ExtendHoldRequest)        returns (ExtendHoldResponse);
+
+  // Convert hold → SOLD (called after payment succeeds)
+  rpc ConfirmHold       (ConfirmHoldRequest)       returns (ConfirmHoldResponse);
+
+  // Bulk-status query (used by seat map rendering)
+  rpc GetSeatStates     (GetSeatStatesRequest)     returns (GetSeatStatesResponse);
+
+  // Bulk GA availability query
+  rpc GetGaAvailability (GetGaAvailabilityRequest) returns (GetGaAvailabilityResponse);
+
+  // Health check
+  rpc Health            (HealthRequest)            returns (HealthResponse);
+}
+
+// ─── HoldSeat ──────────────────────────────────────────────
+message HoldSeatRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string event_occurrence_id = 2;
+  string seat_id             = 3;
+  int32  ttl_seconds         = 4;   // 0 = use service default (600)
+}
+
+message HoldSeatResponse {
+  omnitix.common.v1.Result    result = 1;
+  omnitix.common.v1.HoldToken token  = 2;   // Set only on success
+}
+
+// ─── HoldGaZone ────────────────────────────────────────────
+message HoldGaZoneRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string event_occurrence_id = 2;
+  string ga_zone_id          = 3;
+  int32  quantity            = 4;
+  int32  ttl_seconds         = 5;
+}
+
+message HoldGaZoneResponse {
+  omnitix.common.v1.Result    result = 1;
+  omnitix.common.v1.HoldToken token  = 2;
+  int32 remaining_capacity = 3;   // For UI feedback
+}
+
+// ─── HoldBestAvailable ─────────────────────────────────────
+message HoldBestAvailableRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string event_occurrence_id = 2;
+  string section_code        = 3;   // Empty = search all sections
+  int32  quantity            = 4;
+  int32  ttl_seconds         = 5;
+}
+
+message HoldBestAvailableResponse {
+  omnitix.common.v1.Result result = 1;
+  repeated omnitix.common.v1.HoldToken tokens = 2;  // One per seat
+  string selected_section = 3;
+  string selected_row     = 4;
+}
+
+// ─── ReleaseHold ───────────────────────────────────────────
+message ReleaseHoldRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string token = 2;
+}
+
+message ReleaseHoldResponse {
+  omnitix.common.v1.Result result = 1;
+}
+
+// ─── ExtendHold ────────────────────────────────────────────
+message ExtendHoldRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string token = 2;
+  int32  additional_seconds = 3;   // Max 300 in v1
+}
+
+message ExtendHoldResponse {
+  omnitix.common.v1.Result result = 1;
+  google.protobuf.Timestamp new_expires_at = 2;
+  int32 extensions_used = 3;   // 0 or 1 in v1
+}
+
+// ─── ConfirmHold ───────────────────────────────────────────
+message ConfirmHoldRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string token    = 2;
+  string order_id = 3;   // For audit trail
+}
+
+message ConfirmHoldResponse {
+  omnitix.common.v1.Result result = 1;
+}
+
+// ─── GetSeatStates ─────────────────────────────────────────
+message GetSeatStatesRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string event_occurrence_id = 2;
+  repeated string seat_ids   = 3;   // Empty = all seats in occurrence
+}
+
+message SeatStateEntry {
+  string seat_id = 1;
+  omnitix.common.v1.SeatState state = 2;
+  google.protobuf.Timestamp state_changed_at = 3;   // For held seats
+}
+
+message GetSeatStatesResponse {
+  omnitix.common.v1.Result result = 1;
+  repeated SeatStateEntry seats   = 2;
+}
+
+// ─── GetGaAvailability ─────────────────────────────────────
+message GetGaAvailabilityRequest {
+  omnitix.common.v1.RequestContext context = 1;
+  string event_occurrence_id = 2;
+  string ga_zone_id          = 3;
+}
+
+message GetGaAvailabilityResponse {
+  omnitix.common.v1.Result result = 1;
+  int32 total_capacity = 2;
+  int32 held           = 3;
+  int32 sold           = 4;
+  int32 available      = 5;
+}
+
+// ─── Health ────────────────────────────────────────────────
+message HealthRequest {}
+
+message HealthResponse {
+  bool   healthy          = 1;
+  string version          = 2;
+  bool   redis_connected  = 3;
+  bool   kafka_connected  = 4;
+  google.protobuf.Timestamp checked_at = 5;
+}

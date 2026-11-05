@@ -18,6 +18,8 @@ FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=build /app/target/release/omnitix-crypto .
-COPY services/rust-crypto/keys ./keys
+COPY services/rust-crypto/keys /keys
+ENV KEY_PATH=/keys
+ENV KEY_ID=v1
 EXPOSE 50052 50054
 ENTRYPOINT ["./omnitix-crypto"]
